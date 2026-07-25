@@ -78,28 +78,4 @@ Streamlit deployments.
 
 ---
 
-## How it works (for interview prep)
 
-1. **Load** — PyPDFLoader reads each PDF page-by-page, tagging each page
-   with its source filename and page number.
-2. **Chunk** — `RecursiveCharacterTextSplitter` breaks pages into ~1000-character
-   overlapping chunks (overlap prevents losing context at chunk boundaries).
-3. **Embed** — each chunk is converted into a vector using Gemini's
-   `embedding-001` model — vectors capture semantic meaning, so "revenue"
-   and "sales income" land close together in vector space.
-4. **Store** — vectors + chunk text + metadata (file, page) go into a local
-   Chroma vector database.
-5. **Retrieve** — when you ask a question, it's embedded the same way, and
-   Chroma returns the `k` most similar chunks by cosine similarity.
-6. **Generate** — those chunks are stuffed into a prompt template along with
-   your question, and Gemini answers using *only* that context — this is
-   what makes it "retrieval-augmented" rather than the model just guessing
-   from its training data.
-7. **Cite** — the app displays which file/page each retrieved chunk came
-   from, so answers are auditable.
-
-Be ready to explain: why chunking matters (context window limits + retrieval
-precision), why overlap helps, what "k" trades off (too low = missed
-context, too high = noisy/irrelevant context diluting the answer), and why
-grounding in retrieved text reduces hallucination versus asking the LLM
-directly.
