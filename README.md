@@ -68,13 +68,7 @@ as a user input in the sidebar, so each visitor (including recruiters trying
 it out) enters their own key — this is the standard, safe pattern for public
 Streamlit deployments.
 
-## 6. Resume bullet (fill in after you run eval.py)
 
-> **AI Document Q&A System — RAG Pipeline** | LangChain, Google Gemini API, ChromaDB, Streamlit
-> - Built a retrieval-augmented generation pipeline over multi-document PDF corpora, using Gemini embeddings and ChromaDB vector search to ground LLM answers in source text
-> - Implemented page-level citation tracing so every answer links back to its exact source chunk, eliminating unsupported claims
-> - Evaluated retrieval quality on a custom 15-question test set, achieving **[X]%** top-3 retrieval accuracy
-> Live: your-app-name.streamlit.app
 
 ---
 
