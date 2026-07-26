@@ -20,7 +20,7 @@ import sys
 import json
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
@@ -30,7 +30,7 @@ def build_index(pdf_path, chunk_size=1000, chunk_overlap=150):
     pages = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     chunks = splitter.split_documents(pages)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
     vectorstore = Chroma.from_documents(chunks, embedding=embeddings)
     return vectorstore
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print(f"Building index from {pdf_path} ...")
     vectorstore = build_index(pdf_path)
 
-    K = 3
+    K = 5
     print(f"Evaluating top-{K} retrieval accuracy on {len(questions)} questions ...")
     accuracy, results = evaluate(vectorstore, questions, k=K)
 

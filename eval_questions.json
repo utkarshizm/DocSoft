@@ -1,14 +1,10 @@
 [
   {
-    "question": "Replace with a real question about your PDF",
+    "question": "What is my name?",
     "expected_page": 0
   },
   {
-    "question": "e.g. What was the total revenue in Q4?",
-    "expected_page": 3
-  },
-  {
-    "question": "e.g. Who is the CEO mentioned in the report?",
-    "expected_page": 1
+    "question": "What university did I attend?",
+    "expected_page": 0 
   }
 ]
