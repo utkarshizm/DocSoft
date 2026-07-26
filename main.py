@@ -5,7 +5,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_pinecone import PineconeVectorStore  # <-- Swapped Chroma for Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 
@@ -19,10 +19,13 @@ app = FastAPI(title="DocSoft Enterprise API")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     logger.error("GEMINI_API_KEY environment variable not set!")
-    # In a real app, you might exit here, but we'll let it ride for the demo
 
-PERSIST_DIR = "./chroma_db"
+# Setup Pinecone Environment Variables
+os.environ["PINECONE_API_KEY"] = os.getenv("PINECONE_API_KEY", "")
+os.environ["PINECONE_ENV"] = os.getenv("PINECONE_ENV", "")
+
 embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001", google_api_key=GEMINI_API_KEY)
+INDEX_NAME = "docsoft"
 
 # --- 3. Pydantic Models ---
 class Question(BaseModel):
@@ -49,13 +52,12 @@ async def upload_document(file: UploadFile = File(...)):
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
         chunks = splitter.split_documents(docs)
 
-        # Embed & Store (persisting to local disk)
-        vectorstore = Chroma.from_documents(chunks, embedding=embeddings, persist_directory=PERSIST_DIR)
-        vectorstore.persist()
+        # Embed & Store in Pinecone
+        vectorstore = PineconeVectorStore.from_documents(chunks, embeddings, index_name=INDEX_NAME)
         
         os.unlink(tmp_path) # cleanup
         logger.info(f"Successfully indexed {len(chunks)} chunks from {file.filename}")
-        return {"message": "Document indexed successfully", "chunks": len(chunks)}
+        return {"message": "Document indexed successfully in Pinecone", "chunks": len(chunks)}
     
     except Exception as e:
         logger.error(f"Error processing file: {e}")
@@ -65,7 +67,8 @@ async def upload_document(file: UploadFile = File(...)):
 def ask_question(q: Question):
     logger.info(f"Processing question: {q.question}")
     try:
-        vectorstore = Chroma(persist_directory=PERSIST_DIR, embedding_function=embeddings)
+        # Connect to existing Pinecone index
+        vectorstore = PineconeVectorStore.from_existing_index(index_name=INDEX_NAME, embedding=embeddings)
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         sources = retriever.invoke(q.question)
         
