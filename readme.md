@@ -1,131 +1,149 @@
-DocSoft: Enterprise AI Q&A API
+# DocSoft — Production RAG API for Document Q&A
 
-A production-grade Retrieval-Augmented Generation (RAG) microservice built with FastAPI. It allows users to upload PDF documents and ask natural language questions, returning answers grounded strictly in the source text with page-level citations to eliminate LLM hallucinations.
+DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets you upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — eliminating LLM hallucinations by design.
 
-🌐 Live API: docsoft-tueu.onrender.com📖 Interactive API Docs (Swagger UI): docsoft-tueu.onrender.com/docs
-📊 Production Performance Metrics
+**Live API docs:** https://docsoft-tueu.onrender.com/docs
 
-This API is deployed on Render and monitored via internal high-resolution time.perf_counter() logging. Latency is kept strictly in server logs to prevent internal timing surface area exposure.
-Metric	Latency
-p50	1.44s
-p95	1.50s
+---
 
-Latency includes PDF text extraction, semantic similarity search across the Pinecone vector database, and Google Gemini LLM generation.
-🏗️ System Architecture
+## Overview
 
-graph TD    Client([👤 User / Client App])    API[FastAPI Backend]    Loader[PyPDFLoader & Text Splitter]    Embed[Google Gemini Embeddings]    Pinecone[(Pinecone Cloud Vector DB)]    LLM[Google Gemini LLM]    Client -->|1. Upload PDF| API    API -->|2. Extract & Chunk| Loader    Loader -->|3. Vectorize| Embed    Embed -->|4. Store Vectors| Pinecone        Client -->|5. Ask Question| API    API -->|6. Similarity Search| Pinecone    Pinecone -->|7. Return Top-K Chunks| API    API -->|8. Context + Question| LLM    LLM -->|9. Generated Answer| API    API -->|10. JSON Response + Citations| Client
+Traditional LLM chat can confidently invent answers that aren't in your source documents. DocSoft solves this by:
 
-🛠️ Tech Stack
+1. Chunking and embedding uploaded documents into a vector database
+2. Retrieving only the most relevant chunks for a given question
+3. Forcing the LLM to answer strictly from that retrieved context
+4. Returning the answer alongside the exact source passages used
 
-     Backend: FastAPI, Uvicorn (ASGI)
-     AI/LLM: LangChain, Google Gemini API (gemini-3.5-flash-lite & gemini-embedding-001)
-     Vector Database: Pinecone (Managed Cloud)
-     Infrastructure: Docker, GitHub Actions (CI/CD), Render (Cloud Hosting)
+## Architecture
 
-🚀 Key Features
-
-    Decoupled Architecture: Separated the RAG backend from the UI, allowing any frontend (Streamlit, React, mobile app) to connect via standard REST API.
-    Cloud Vector Search: Migrated from local ChromaDB to Pinecone for scalable, persistent, and fast similarity search.
-    Response Sanitization: Defensively strips Google's internal safety/tracking metadata (signature blocks) from the LLM response before returning it to the client.
-    Observability: perf_counter latency tracking and empty-answer warning logs to catch silent LLM failures.
-
-📡 API Endpoints
-
-     GET /
-         Health check to verify the API is running.
-     POST /upload
-         Input: multipart/form-data (PDF file)
-         Action: Extracts text, chunks it, embeds it, and stores it in Pinecone.
-     POST /ask
-         Input: {"question": "Your question here?"}
-         Output: {"answer": "LLM generated text", "sources": [{"page": 0, "content": "..."}]}
-
-📦 Run Locally
-Prerequisites
-
-     Python 3.10+
-     A Google Gemini API Key
-     A Pinecone Account (to create an index with 3072 dimensions)
-
-Installation
-
-    Clone the repository:
-    bash
-     
-      
-     
-     
-    git clone https://github.com/utkarshizm/DocSoft.git
-    cd DocSoft
-     
-     
-
-    Install dependencies:
-    bash
-     
-      
-     
-     
-    pip install -r requirements.txt
-     
-     
-
-    Set Environment Variables:
-    bash
-     
-      
-     
-     
-    export GEMINI_API_KEY="your_google_api_key"
-    export PINECONE_API_KEY="your_pinecone_key"
-    export PINECONE_ENV="gcp-starter"
-     
-     
-
-    Run the FastAPI server:
-    bash
-     
-      
-     
-     
-    uvicorn main:app --reload --port 8000
-     
-     
-
-    Open your browser and navigate to:
-    http://localhost:8000/docs
-
-Run with Docker
-
-    Build the image:
-    bash
-     
-      
-     
-     
-    docker build -t docsoft-api .
-     
-     
-    Run the container:
-    bash
-     
-      
-     
-     
-    docker run -p 8000:8000 --env-file .env docsoft-api
-     
-     
-
-⚙️ CI/CD Pipeline
-
-This repository includes a GitHub Actions workflow (.github/workflows/deploy.yml) that automatically:
-
-    Triggers on every push/PR to the main branch.
-    Sets up a Python environment.
-    Installs dependencies to verify requirements.txt resolves correctly.
-    Prepares the code for Docker build (which Render handles automatically on deploy).
-
-© 2026 Utkarsh Pandey. Designed & Developed with passion.
 ```
-    
-     
+Document upload ──▶ Chunk & embed (LangChain) ──▶ Pinecone vector DB (cloud index)
+                                                          │
+                                                          ▼ retrieval
+User query ──▶ FastAPI backend (Gemini LLM call) ──▶ Answer + cited sources
+                       │
+                       ▼
+              Docker + GitHub Actions CI/CD ──▶ Render (production deploy)
+```
+
+- **Ingestion:** documents are split into chunks and embedded, then indexed in Pinecone for persistent, sub-2s vector search
+- **Query:** a question hits the FastAPI `/ask` endpoint, retrieves the top-matching chunks from Pinecone, and passes them as context to the LLM
+- **Response:** the LLM's raw output is sanitized (internal metadata/signatures stripped) before returning a clean answer with page-level source attribution
+- **Deployment:** every push runs through GitHub Actions CI/CD, builds a Docker image, and deploys to Render with zero manual steps
+
+## Features
+
+- Conversational Q&A grounded in uploaded documents — no hallucinated answers
+- Source attribution with page numbers on every response
+- Cloud vector search via Pinecone (persistent, scales beyond local FAISS/Chroma)
+- Dockerized FastAPI backend with automatic OpenAPI docs (`/docs`)
+- CI/CD pipeline: push to `main` → automated build → deploy to Render
+- Performance instrumentation (`time.perf_counter()`) for latency monitoring
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| LLM & orchestration | Google Gemini API, LangChain |
+| Vector database | Pinecone |
+| Backend | FastAPI, Python |
+| Deployment | Docker, GitHub Actions, Render |
+| Frontend (optional) | Streamlit |
+
+## Performance
+
+Measured over 30 production queries via Render logs:
+
+| Metric | Value |
+|---|---|
+| p50 latency | 1.44s |
+| p95 latency | 1.50s |
+
+Latency is timed with `time.perf_counter()` around the retrieval + generation path and logged server-side.
+
+## API usage
+
+**Ask a question:**
+
+```bash
+curl -X POST 'https://docsoft-tueu.onrender.com/ask' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "question": "What is my name and what university did I attend?"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "answer": "Based on the provided context...",
+  "sources": [
+    { "page": 0, "content": "..." }
+  ]
+}
+```
+
+Full interactive docs (Swagger UI) are available at [`/docs`](https://docsoft-tueu.onrender.com/docs).
+
+## Running locally
+
+```bash
+# clone the repo
+git clone https://github.com/<your-username>/docsoft.git
+cd docsoft
+
+# install dependencies
+pip install -r requirements.txt
+
+# set environment variables (see below)
+cp .env.example .env
+
+# run the app
+uvicorn main:app --reload
+```
+
+Or with Docker:
+
+```bash
+docker build -t docsoft .
+docker run -p 8000:8000 --env-file .env docsoft
+```
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `PINECONE_API_KEY` | Pinecone API key |
+| `PINECONE_INDEX_NAME` | Name of the Pinecone index to use |
+
+## Project structure
+
+```
+docsoft/
+├── main.py              # FastAPI app, /ask and /upload endpoints
+├── ingestion.py         # chunking + embedding pipeline
+├── requirements.txt
+├── Dockerfile
+├── .github/workflows/   # CI/CD pipeline
+└── README.md
+```
+
+## Roadmap
+
+- [ ] API key / rate limiting on public endpoints
+- [ ] Multi-document session support
+- [ ] Streaming responses
+- [ ] Automated latency dashboard (p50/p95 over time)
+
+## Author
+
+**Utkarsh Pandey**
+[LinkedIn](#) · [GitHub](#) · pandeyutkarsh060@gmail.com
+
+## License
+
+MIT
