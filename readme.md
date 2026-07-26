@@ -18,13 +18,14 @@ Traditional LLM chat can confidently invent answers that aren't in your source d
 ## Architecture
 
 ```
-Document upload ──▶ Chunk & embed (LangChain) ──▶ Pinecone vector DB (cloud index)
+Document upload ──▶ Chunk & embed (LangChain) ──▶ Pinecone vector DB
                                                           │
                                                           ▼ retrieval
 User query ──▶ FastAPI backend (Gemini LLM call) ──▶ Answer + cited sources
-                       │
-                       ▼
-              Docker + GitHub Actions CI/CD ──▶ Render (production deploy)
+
+
+Deployment (on every push to main):
+  Docker build ──▶ GitHub Actions CI/CD ──▶ Render (hosts the FastAPI backend above)
 ```
 
 - **Ingestion:** documents are split into chunks and embedded, then indexed in Pinecone for persistent, sub-2s vector search
