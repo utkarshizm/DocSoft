@@ -1,11 +1,12 @@
 import os
+import time
 import logging
 import tempfile
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_pinecone import PineconeVectorStore  # <-- Swapped Chroma for Pinecone
+from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 
@@ -65,6 +66,8 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/ask")
 def ask_question(q: Question):
+    # Use perf_counter for high-resolution, monotonic timing
+    start_time = time.perf_counter() 
     logger.info(f"Processing question: {q.question}")
     try:
         # Connect to existing Pinecone index
@@ -81,11 +84,25 @@ def ask_question(q: Question):
         
         llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0, google_api_key=GEMINI_API_KEY)
         chain = prompt | llm
-        response = chain.invoke({"context": context_text, "question": q.question})
+        raw_response = chain.invoke({"context": context_text, "question": q.question})
         
-        logger.info("Successfully generated answer.")
+        # Sanitize Gemini's response to extract ONLY text, ignoring internal signatures
+        if isinstance(raw_response.content, list):
+            answer_text = "".join([part.get("text", "") for part in raw_response.content if isinstance(part, dict) and part.get("type") == "text"])
+        else:
+            answer_text = raw_response.content
+
+        # Defensive check: log a warning if the LLM returned an empty answer
+        if not answer_text.strip():
+            logger.warning(f"Sanitization resulted in empty answer for question: {q.question}")
+
+        # Log latency for internal monitoring ONLY
+        elapsed_time = time.perf_counter() - start_time
+        logger.info(f"Query processed in {elapsed_time:.4f} seconds")
+        
+        # Return response (NO internal timing exposed to the client)
         return {
-            "answer": response.content,
+            "answer": answer_text,
             "sources": [{"page": d.metadata.get("page", "?"), "content": d.page_content[:200]} for d in sources]
         }
     except Exception as e:
