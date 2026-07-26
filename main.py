@@ -79,7 +79,7 @@ def ask_question(q: Question):
             input_variables=["context", "question"]
         )
         
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0, google_api_key=GEMINI_API_KEY)
+        llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0, google_api_key=GEMINI_API_KEY)
         chain = prompt | llm
         response = chain.invoke({"context": context_text, "question": q.question})
         
