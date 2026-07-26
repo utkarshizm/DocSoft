@@ -92,7 +92,7 @@ Full interactive docs (Swagger UI) are available at [`/docs`](https://docsoft-tu
 
 ```bash
 # clone the repo
-git clone https://github.com/<your-username>/docsoft.git
+git clone https://github.com/utkarshizm/docsoft.git
 cd docsoft
 
 # install dependencies
@@ -142,7 +142,7 @@ docsoft/
 ## Author
 
 **Utkarsh Pandey**
-[LinkedIn](#) · [GitHub](#) · pandeyutkarsh060@gmail.com
+· pandeyutkarsh060@gmail.com
 
 ## License
 
