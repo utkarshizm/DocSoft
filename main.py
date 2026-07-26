@@ -24,7 +24,7 @@ if not GEMINI_API_KEY:
 os.environ["PINECONE_API_KEY"] = os.getenv("PINECONE_API_KEY", "")
 os.environ["PINECONE_ENV"] = os.getenv("PINECONE_ENV", "")
 
-embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-004", google_api_key=GEMINI_API_KEY)
+embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001", google_api_key=GEMINI_API_KEY)
 INDEX_NAME = "docsoft"
 
 # --- 3. Pydantic Models ---
