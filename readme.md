@@ -1,4 +1,3 @@
-```markdown
 # DocSoft — Production RAG API for Document Q&A
 
 DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets you upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — reducing LLM hallucination by design and returning cited source passages with every answer.
