@@ -118,13 +118,7 @@ docker build -t docsoft .
 docker run -p 8000:8000 --env-file .env docsoft
 ```
 
-## Environment variables
 
-| Variable | Description |
-|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `PINECONE_API_KEY` | Pinecone API key |
-| `PINECONE_INDEX_NAME` | Name of the Pinecone index to use |
 
 ## Project structure
 
