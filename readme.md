@@ -49,8 +49,9 @@ Deployment (on every push to main):
 | LLM & orchestration | Google Gemini API, LangChain |
 | Vector database | Pinecone |
 | Backend | FastAPI, Python |
+| API Documentation / UI | Scalar UI (OpenAPI 3.1) |
 | Deployment | Docker, GitHub Actions, Render |
-| Frontend (optional) | Streamlit |
+
 
 ## Performance testing & observability
 
