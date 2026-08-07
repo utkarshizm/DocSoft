@@ -1,6 +1,7 @@
+```markdown
 # DocSoft — Production RAG API for Document Q&A
 
-DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets users upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — reducing LLM hallucination by design and returning cited source passages with every answer.
+DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets you upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — reducing LLM hallucination by design and returning cited source passages with every answer.
 
 **Live API docs:** https://docsoft-tueu.onrender.com/docs
 
@@ -92,7 +93,7 @@ curl -X POST 'https://docsoft-tueu.onrender.com/ask' \
 }
 ```
 
-Full interactive docs (Swagger UI) are available at [`/docs`](https://docsoft-tueu.onrender.com/docs).
+Full interactive docs (Scalar UI) are available at [`/docs`](https://docsoft-tueu.onrender.com/docs).
 
 ## Running locally
 
@@ -118,14 +119,11 @@ docker build -t docsoft .
 docker run -p 8000:8000 --env-file .env docsoft
 ```
 
-
-
 ## Project structure
 
 ```
 docsoft/
-├── main.py              # FastAPI app, /ask and /upload endpoints
-├── ingestion.py         # chunking + embedding pipeline
+├── main.py              # FastAPI app, /ask and /upload endpoints, chunking & embedding logic
 ├── requirements.txt
 ├── Dockerfile
 ├── .github/workflows/   # CI/CD pipeline
@@ -147,3 +145,4 @@ docsoft/
 ## License
 
 MIT
+```
