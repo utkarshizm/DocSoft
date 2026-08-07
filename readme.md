@@ -1,19 +1,19 @@
 # DocSoft — Production RAG API for Document Q&A
 
-DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets you upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — eliminating LLM hallucinations by design.
+DocSoft is a Retrieval-Augmented Generation (RAG) microservice that lets users upload documents (PDF, text) and ask natural-language questions grounded strictly in their content — reducing LLM hallucination by design and returning cited source passages with every answer.
 
 **Live API docs:** https://docsoft-tueu.onrender.com/docs
 
 ---
 
-## Overview
+## The problem
 
-Traditional LLM chat can confidently invent answers that aren't in your source documents. DocSoft solves this by:
+General-purpose LLM chat can confidently generate answers that aren't actually supported by a source document. DocSoft addresses this by constraining generation to retrieved context only:
 
-1. Chunking and embedding uploaded documents into a vector database
-2. Retrieving only the most relevant chunks for a given question
-3. Forcing the LLM to answer strictly from that retrieved context
-4. Returning the answer alongside the exact source passages used
+1. Uploaded documents are chunked and embedded into a vector database
+2. A user's question triggers retrieval of only the most relevant chunks
+3. The LLM is instructed to answer strictly from that retrieved context
+4. The response includes the exact source passages used, with page numbers
 
 ## Architecture
 
@@ -23,24 +23,24 @@ Document upload ──▶ Chunk & embed (LangChain) ──▶ Pinecone vector DB
                                                           ▼ retrieval
 User query ──▶ FastAPI backend (Gemini LLM call) ──▶ Answer + cited sources
 
-
 Deployment (on every push to main):
-  Docker build ──▶ GitHub Actions CI/CD ──▶ Render (hosts the FastAPI backend above)
+  Docker build ──▶ GitHub Actions CI/CD ──▶ Render (hosts the FastAPI backend)
 ```
 
-- **Ingestion:** documents are split into chunks and embedded, then indexed in Pinecone for persistent, sub-2s vector search
-- **Query:** a question hits the FastAPI `/ask` endpoint, retrieves the top-matching chunks from Pinecone, and passes them as context to the LLM
-- **Response:** the LLM's raw output is sanitized (internal metadata/signatures stripped) before returning a clean answer with page-level source attribution
-- **Deployment:** every push runs through GitHub Actions CI/CD, builds a Docker image, and deploys to Render with zero manual steps
+- **Ingestion:** documents are split into chunks, embedded, and indexed in Pinecone for persistent vector search
+- **Query:** a question hits the FastAPI `/ask` endpoint, retrieves top-matching chunks from Pinecone, and passes them as grounding context to the LLM
+- **Response:** LLM output is sanitized (internal metadata stripped) before returning a clean answer with page-level source attribution
+- **Multi-tenancy:** server-side API key resolution maps each caller to an isolated Pinecone namespace, preventing cross-tenant data access
+- **Deployment:** every push to `main` runs through GitHub Actions, builds a Docker image, and deploys to Render with no manual steps
 
 ## Features
 
-- Conversational Q&A grounded in uploaded documents — no hallucinated answers
-- Source attribution with page numbers on every response
+- Conversational Q&A grounded in uploaded documents, with source attribution (page numbers) on every response
+- Multi-tenant data isolation via namespace-scoped API keys
 - Cloud vector search via Pinecone (persistent, scales beyond local FAISS/Chroma)
 - Dockerized FastAPI backend with automatic OpenAPI docs (`/docs`)
 - CI/CD pipeline: push to `main` → automated build → deploy to Render
-- Performance instrumentation (`time.perf_counter()`) for latency monitoring
+- Latency instrumentation (`time.perf_counter()`) around the retrieval + generation path
 
 ## Tech stack
 
@@ -52,16 +52,20 @@ Deployment (on every push to main):
 | Deployment | Docker, GitHub Actions, Render |
 | Frontend (optional) | Streamlit |
 
-## Performance
+## Performance testing & observability
 
-Measured over 30 production queries via Render logs:
+**Concurrent load test.** An async load test (`httpx`, 5 concurrent workers) was run against the live API to characterize behavior under simultaneous traffic. This surfaced a real bottleneck: Google Gemini's free-tier rate limit (15 RPM) was being exceeded, and because the client library didn't explicitly handle `429` responses, they surfaced to callers as unhandled `500` errors.
 
-| Metric | Value |
+**Baseline latency benchmark.** To characterize normal-case performance independent of that rate limit, a sequential benchmark (1 request at a time, n=12) was run against the live endpoint:
+
+| Metric | Latency |
 |---|---|
-| p50 latency | 1.44s |
-| p95 latency | 1.50s |
+| p50 | ~1.48s |
+| p95 | ~2.16s |
 
-Latency is timed with `time.perf_counter()` around the retrieval + generation path and logged server-side.
+Latency covers the full retrieval + generation path: Pinecone semantic search plus Gemini LLM generation, timed server-side with `time.perf_counter()`.
+
+*Note: this is a small-sample baseline (n=12), not a high-confidence SLA — sufficient to characterize typical response time, not to bound tail latency precisely.*
 
 ## API usage
 
@@ -71,6 +75,7 @@ Latency is timed with `time.perf_counter()` around the retrieval + generation pa
 curl -X POST 'https://docsoft-tueu.onrender.com/ask' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <your_api_key>' \
   -d '{
     "question": "What is my name and what university did I attend?"
   }'
@@ -135,10 +140,10 @@ docsoft/
 
 ## Roadmap
 
-- [ ] API key / rate limiting on public endpoints
+- [ ] Rate-limit handling / backoff for downstream LLM 429s
 - [ ] Multi-document session support
 - [ ] Streaming responses
-- [ ] Automated latency dashboard (p50/p95 over time)
+- [ ] Automated latency dashboard (p50/p95 over time, larger sample size)
 
 ## Author
 
