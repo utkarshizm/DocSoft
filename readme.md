@@ -63,6 +63,7 @@ Deployment (on every push to main):
 |---|---|
 | p50 | ~1.48s |
 | p95 | ~2.16s |
+![Latency Graph](latency_graph.png)
 
 Latency covers the full retrieval + generation path: Pinecone semantic search plus Gemini LLM generation, timed server-side with `time.perf_counter()`.
 
