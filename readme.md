@@ -146,4 +146,3 @@ docsoft/
 ## License
 
 MIT
-```
